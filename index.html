@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Strategy Comparator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center my-8">RAG Strategy Comparator Chatbot</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Left Column: Document Input & Strategy Selection -->
+            <div class="md:col-span-1 bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4">1. Load Your Document</h2>
+                <div id="document-input-section">
+                    <textarea id="document-text" class="w-full h-64 p-2 border rounded" placeholder="Paste your plain text document here..."></textarea>
+                </div>
+
+                <h2 class="text-2xl font-semibold mb-4 mt-8">2. Select Strategies</h2>
+                <div id="strategy-selection-section">
+                    <div class="mb-4">
+                        <label for="chunking-strategy" class="block text-sm font-medium text-gray-700">Chunking Strategy</label>
+                        <select id="chunking-strategy" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option value="fixed">Fixed-Size Chunking</option>
+                            <option value="recursive">Recursive Chunking</option>
+                            <option value="document">Document-Based Chunking</option>
+                            <option value="semantic">Semantic Chunking</option>
+                            <option value="agentic">Agentic Chunking</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="retrieval-strategy" class="block text-sm font-medium text-gray-700">Retrieval Strategy</label>
+                        <select id="retrieval-strategy" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option value="top-k">Simple Top-K</option>
+                            <option value="mmr">Maximal Marginal Relevance (MMR)</option>
+                            <option value="parent">Parent Document Retriever</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Chat Interface -->
+            <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md flex flex-col">
+                <h2 class="text-2xl font-semibold mb-4">3. Chat with Your Document</h2>
+                <div id="chat-window" class="flex-grow border rounded-lg p-4 mb-4 h-96 overflow-y-auto bg-gray-50">
+                    <!-- Chat messages will appear here -->
+                    <div class="text-center text-gray-500">Upload a document and select your strategies to begin.</div>
+                </div>
+                <div id="chat-input-section" class="flex">
+                    <input type="text" id="chat-input" class="flex-grow border rounded-l-lg p-2" placeholder="Ask a question...">
+                    <button id="send-button" class="bg-blue-500 text-white px-4 py-2 rounded-r-lg hover:bg-blue-600">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
