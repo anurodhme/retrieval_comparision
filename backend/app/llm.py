@@ -7,13 +7,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def generate_response(context: str, query: str) -> str:
+async def generate_response(context: str, query: str, conversation_history: list = None) -> str:
     """
-    Generate response using Gemini API
+    Generate response using Gemini API with conversation memory
     
     Args:
         context: Retrieved context from document chunks
         query: User query
+        conversation_history: List of previous messages [{"role": "user/assistant", "content": "..."}]
         
     Returns:
         Generated response text
@@ -28,21 +29,39 @@ async def generate_response(context: str, query: str) -> str:
             f"Query: {query}"
         )
     
-    # Construct the prompt
-    prompt = f"""Based on the following context, answer the user's question accurately and concisely.
+    # Build conversation history
+    history_text = ""
+    if conversation_history:
+        history_text = "\n\nPrevious Conversation:\n"
+        for msg in conversation_history[-6:]:  # Last 3 exchanges (6 messages)
+            role = "User" if msg["role"] == "user" else "Assistant"
+            history_text += f"{role}: {msg['content']}\n"
+    
+    # Construct the improved prompt
+    prompt = f"""You are a concise teaching assistant helping students understand lecture materials.
 
-Context:
+Guidelines:
+- Keep responses SHORT and FOCUSED (2-3 paragraphs max)
+- NO markdown formatting (no **, *, #, -, etc.) - use plain text only
+- For "what is X" questions: Give a brief definition and key points
+- For "how to solve" questions: Provide step-by-step approach
+- Use simple language and avoid overly technical jargon unless necessary
+- If asked for more detail, then elaborate
+- Reference previous conversation when relevant
+
+Lecture Material:
 {context}
+{history_text}
 
 Question: {query}
 
-Answer:"""
+Provide a concise, plain-text answer (no markdown):"""
     
     try:
         import google.generativeai as genai
         
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         response = model.generate_content(prompt)
         return response.text

@@ -15,7 +15,14 @@ app = FastAPI(title="RAG Strategy Comparator API")
 # CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # React dev servers
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174", 
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,7 +33,8 @@ document_store = {
     'text': '',
     'chunks': [],
     'chunking_strategy': '',
-    'retrieval_strategy': ''
+    'retrieval_strategy': '',
+    'conversation_history': []  # Store conversation for context
 }
 
 
@@ -38,6 +46,7 @@ class DocumentUpload(BaseModel):
 
 class Query(BaseModel):
     query: str
+    conversation_history: list = []  # Optional conversation history from frontend
 
 
 @app.get("/")
@@ -59,6 +68,25 @@ async def upload_document(data: DocumentUpload):
     # Chunk the document
     chunks = chunk_document(data.document_text, data.chunking_strategy)
     document_store['chunks'] = chunks
+    
+    # Clear conversation history when new document is uploaded
+    document_store['conversation_history'] = []
+    
+    # Pre-generate embeddings for semantic/hybrid retrieval to speed up queries
+    if data.retrieval_strategy in ['semantic', 'hybrid']:
+        from app.retrieval import _embedding_model
+        try:
+            from sentence_transformers import SentenceTransformer
+            if _embedding_model is None:
+                # Load model once
+                import app.retrieval as retrieval_module
+                retrieval_module._embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            # Pre-compute chunk embeddings
+            import app.retrieval as retrieval_module
+            retrieval_module._chunk_embeddings = retrieval_module._embedding_model.encode(chunks)
+        except Exception as e:
+            print(f"Warning: Could not pre-compute embeddings: {e}")
+            pass  # Fallback to computing on query
     
     return {
         "message": "Document uploaded successfully",
@@ -106,7 +134,7 @@ async def upload_file(
 
 @app.post("/api/query")
 async def query_document(data: Query):
-    """Handle user queries and generate responses"""
+    """Handle user queries and generate responses with conversation memory"""
     if not data.query:
         raise HTTPException(status_code=400, detail="No query provided")
     
@@ -120,8 +148,16 @@ async def query_document(data: Query):
         document_store['retrieval_strategy']
     )
     
-    # Generate response using Gemini API
-    response = await generate_response(context, data.query)
+    # Use conversation history from request or stored history
+    conversation_history = data.conversation_history if data.conversation_history else document_store.get('conversation_history', [])
+    
+    # Generate response using Gemini API with conversation context
+    response = await generate_response(context, data.query, conversation_history)
+    
+    # Store this exchange in conversation history (keep last 10 exchanges)
+    document_store['conversation_history'].append({"role": "user", "content": data.query})
+    document_store['conversation_history'].append({"role": "assistant", "content": response})
+    document_store['conversation_history'] = document_store['conversation_history'][-20:]  # Keep last 10 exchanges
     
     return {
         "response": response,
